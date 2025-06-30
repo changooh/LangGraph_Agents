@@ -284,4 +284,4 @@ demo = gr.ChatInterface(
 )
 
 # 데모 실행
-demo.launch(share=True)
+demo.launch()
