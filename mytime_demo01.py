@@ -13,7 +13,7 @@ from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.schema import BaseMessage, HumanMessage, AIMessage
 import os
 from dotenv import load_dotenv
-load_dotenv()
+
 
 
 # 근무 기록 데이터 클래스
@@ -351,6 +351,8 @@ class WorkTimeTools:
 # CalendarAI 클래스 (WorkTimeAI로 변경)
 class WorkTimeAI:
     def __init__(self, openai_api_key: str = None):
+        load_dotenv()
+        print(os.getenv("OPENAI_API_KEY"))
         self.api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
             raise ValueError("OpenAI API 키가 필요합니다. 환경변수 OPENAI_API_KEY를 설정하거나 매개변수로 전달해주세요.")
@@ -428,12 +430,15 @@ class WorkTimeAI:
         항상 친절하고 정확한 답변을 제공하며, 계산 과정을 단계별로 설명해주세요.
         """
 
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", system_prompt),
-            MessagesPlaceholder(variable_name="chat_history"),
-            ("human", "{input}"),
-            MessagesPlaceholder(variable_name="agent_scratchpad")
-        ])
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", system_prompt),
+                MessagesPlaceholder(variable_name="chat_history"),
+                ("human", "{input}"),
+                MessagesPlaceholder(variable_name="agent_scratchpad")
+            ],
+            input_variables=["input", "chat_history", "agent_scratchpad", "tools", "tool_names"]
+        )
 
         return create_react_agent(
             llm=self.llm,
@@ -466,7 +471,10 @@ class WorkTimeAI:
 class ChatBot:
     def __init__(self):
         try:
-            self.calendar_ai = WorkTimeAI()  # CalendarAI 대신 WorkTimeAI 사용
+            load_dotenv()
+            print("OpenAI API 키 로드")
+            print(os.getenv("OPENAI_API_KEY"))
+            self.calendar_ai = WorkTimeAI(openai_api_key=os.getenv("OPENAI_API_KEY"))  # CalendarAI 대신 WorkTimeAI 사용
             self.thread_id = str(uuid.uuid4())
         except Exception as e:
             print(f"ChatBot 초기화 오류: {e}")
@@ -501,20 +509,8 @@ if __name__ == "__main__":
         fn=chatbot.chat,
         title="근무 보상 휴가 계산 AI Agent",
         description="AI가 여러분의 근무 기록을 분석하여 보상 휴가 시간을 정확히 계산해드립니다.",
-        # examples=example_questions,
+        examples=example_questions,
         theme=gr.themes.Soft(),
-        retry_btn=None,
-        undo_btn="↩️ 되돌리기",
-        clear_btn="🗑️ 대화 초기화",
-        submit_btn="📤 전송",
-        additional_inputs=[
-            gr.Textbox(
-                label="📋 입력 가이드",
-                value="• 정형 데이터: 2024-01-15 09:00-23:00\n• 자연어: 어제 9시부터 11시까지 근무\n• 대체휴일: 대체휴일: 2024-01-20",
-                interactive=False,
-                lines=3
-            )
-        ]
     )
 
     demo.launch()
